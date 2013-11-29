@@ -1,6 +1,6 @@
 " ACEJUMP
 " Based on emacs' AceJump feature (http://www.emacswiki.org/emacs/AceJump).
-" AceJump based on these Vim plugins:
+" AceJump is based on these Vim plugins:
 " EasyMotion (http://www.vim.org/scripts/script.php?script_id=3526)
 " PreciseJump (http://www.vim.org/scripts/script.php?script_id=3437)
 " All words on the screen starting with that letter will have
@@ -10,8 +10,6 @@
 " Adapted from https://gist.github.com/gfixler/3167301
 " The author expressed that they do not want to maintain this script, so
 " here this
-" The author expressed that they do not want to maintain this script, so
-" here this.
 
 " if exists('g:AceJump_Loaded') || &cp || version < 702
 "     finish
