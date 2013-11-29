@@ -65,26 +65,37 @@ function! s:getInput()
     return nr2char(char)
 endfunction
 
-function! s:buildPositionList(pattern)
+function! s:buildPositionList(initial, pattern)
     " row/col positions of words beginning with user's chosen letter
-    let pos = []
+    let posList = []
 
-    " loop over every line on the screen (just the visible lines)
-    for row in range(line('w0'), line('w$'))
-        let bufLine = ' ' . getline(row)
+    call setpos('.', [0, line('w0'), 1, 0])
+    while 1
+        let position = searchpos(a:pattern, 'eW', line('w$'))
+        if position == [0, 0]
+            break
+        endif
+        let position[1] = position[1] - 1
+        call add(posList, position)
+    endwhile
+    call setpos('.', a:initial)
 
-        " find all columns on this line where a word begins with our letter
-        let col = 0
-        let matchCol = match(bufLine, a:pattern, col)
-        while matchCol != -1
-            " store any matching row/col positions
-            call add(pos, [row, matchCol])
-            let col = matchCol + 1
-            let matchCol = match(bufLine, a:pattern, col)
-        endwhile
-    endfor
+    " " loop over every line on the screen (just the visible lines)
+    " for row in range(line('w0'), line('w$'))
+    "     let bufLine = ' ' . getline(row)
 
-    return pos
+    "     " find all columns on this line where a word begins with our letter
+    "     let col = 0
+    "     let matchCol = match(bufLine, a:pattern, col)
+    "     while matchCol != -1
+    "         " store any matching row/col positions
+    "         call add(posList, [row, matchCol])
+    "         let col = matchCol + 1
+    "         let matchCol = match(bufLine, a:pattern, col)
+    "     endwhile
+    " endfor
+
+    return posList
 endfunction
 
 function! s:jumpToPosition(initialPos, posList, origSearch)
@@ -177,15 +188,15 @@ function! AceJump(method)
             return
         endif
 
-        let pattern = '.\<' . letter
+        let pattern = '\<' . letter
     elseif a:method == 'line'
-        let pattern = '^ .*$'
+        let pattern = '^\(\w\|\s*\zs\|$\)'
     else
         call s:message("Invalid Jump Method")    
         return
     endif
 
-    let pos = s:buildPositionList(pattern)
+    let pos = s:buildPositionList(initial, pattern)
 
     if len(pos) == 0
         " If there aren't any matches, just jump back and peace out.
