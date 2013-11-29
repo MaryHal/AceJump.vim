@@ -9,8 +9,8 @@
 "
 " Adapted from https://gist.github.com/gfixler/3167301
 " The author expressed that they do not want to maintain this script, so
-" here this
-
+" here this is.
+"
 " if exists('g:AceJump_Loaded') || &cp || version < 702
 "     finish
 " endif
@@ -64,7 +64,7 @@ function! s:getInput()
 endfunction
 
 function! s:buildPositionList(initial, pattern)
-    " row/col positions of words beginning with user's chosen letter
+    " Row/col positions of words beginning with user's chosen letter
     let posList = []
 
     call setpos('.', [0, line('w0'), 1, 0])
@@ -84,58 +84,44 @@ function! s:buildPositionList(initial, pattern)
     endwhile
     call setpos('.', a:initial)
 
-    " " loop over every line on the screen (just the visible lines)
-    " for row in range(line('w0'), line('w$'))
-    "     let bufLine = ' ' . getline(row)
-
-    "     " find all columns on this line where a word begins with our letter
-    "     let col = 0
-    "     let matchCol = match(bufLine, a:pattern, col)
-    "     while matchCol != -1
-    "         " store any matching row/col positions
-    "         call add(posList, [row, matchCol])
-    "         let col = matchCol + 1
-    "         let matchCol = match(bufLine, a:pattern, col)
-    "     endwhile
-    " endfor
-
     return posList
 endfunction
 
 function! s:jumpToPosition(initialPos, posList, origSearch)
-    " jump characters used to mark found words (user-editable)
+    " Jump characters used to mark found words (user-editable)
     let chars = 'abcdefghijlkmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
     if len(a:posList) > len(chars)
         " TODO add groupings here if more pos matches than jump characters
     endif
 
-    " trim found positions list; cannot be longer than jump markers list
+    " Trim found positions list; cannot be longer than jump markers list
     let pos = a:posList[:len(chars)]
 
-    " jumps list to pair jump characters with found word positions
+    " Jumps list to pair jump characters with found word positions
     let jumps = {}
-    " change each found word's first letter to a jump character
+
+    " Change each found position to a jump character
     for [r,c] in pos
-        " stop marking words if there are no more jump characters
+        " Stop marking words if there are no more jump characters
         if len(chars) == 0
             break
         endif
 
-        " 'pop' the next jump character from the list
+        " 'Pop' the next jump character from the list
         let char = chars[0]
         let chars = chars[1:]
 
-        " move cursor to the next found word
+        " Move cursor to the next found word
         call setpos('.', [0, r, c+1, 0])
 
-        " create jump character key to hold associated found word position
+        " Create jump character key to hold associated found word position
         let jumps[char] = [0, r, c+1, 0]
 
-        " replace first character in word with current jump character
+        " Replace first character in word with current jump character
         exe 'normal! r'.char
 
-        " change syntax on the jump character to make it highly visible
+        " Change syntax on the jump character to make it highly visible
         call matchadd('AceJumpRed', '\%' . r . 'l\%' . (c+1) . 'c', 50)
     endfor
     call setpos('.', a:initialPos)
@@ -143,36 +129,58 @@ function! s:jumpToPosition(initialPos, posList, origSearch)
     " This redraw is critical to syntax highlighting
     redraw
 
-    " prompt user again for the jump character to jump to
+    " Prompt user again for the jump character to jump to
     call s:prompt("AceJump to location")
     let jumpChar = s:getInput()
 
-    " get rid of our syntax search highlighting
+    " Get rid of our syntax search highlighting
     call clearmatches()
 
-    " clear out the status line
+    " Clear out the status line
     echo ""
     redraw
 
-    " restore previous search register value
+    " Restore previous search register value
     let @/ = a:origSearch
 
-    " undo all the jump character letter replacement
+    " Undo all the jump character letter replacement
     normal! u
 
-    " if the user input a proper jump character, jump to it
+    " If the user input a proper jump character, jump to it
     if has_key(jumps, jumpChar)
         call setpos('.', jumps[jumpChar])
     else
         " if it didn't work out, restore original cursor position
         call setpos('.', a:initialPos)
     endif
-
-    " turn off all search highlighting
-    call clearmatches()
 endfunction
 
-function! AceJump(method)
+function! AceJumpWord()
+    call s:prompt("AceJump to words starting with letter")
+    let char = s:getInput()
+    if empty(char)
+        return
+    endif
+    let pattern = '\<' . char 
+    call s:AceJump(pattern)
+endfunction
+
+function! AceJumpChar()
+    call s:prompt("AceJump to words starting with letter")
+    let char = s:getInput()
+    if empty(char)
+        return
+    endif
+    let pattern = '\C' . escape(char, '.$^~')
+    call s:AceJump(pattern)
+endfunction
+
+function! AceJumpLine()
+    let pattern = '^\(\w\|\s*\zs\|$\)'
+    call s:AceJump(pattern)
+endfunction
+
+function! s:AceJump(pattern)
     " Reset properties
     call s:VarReset('&scrolloff', 0)
     call s:VarReset('&modified', 0)
@@ -185,28 +193,7 @@ function! AceJump(method)
     let initial = getpos('.')
     let origSearch = @/
 
-    if a:method == 'word'
-        call s:prompt("AceJump to words starting with letter")
-        let char = s:getInput()
-        if empty(char)
-            return
-        endif
-        let pattern = '\<' . char 
-    elseif a:method == 'char'
-        call s:prompt("AceJump to words starting with letter")
-        let char = s:getInput()
-        if empty(char)
-            return
-        endif
-        let pattern = '\C' . escape(char, '.$^~')
-    elseif a:method == 'line'
-        let pattern = '^\(\w\|\s*\zs\|$\)'
-    else
-        call s:message("Invalid Jump Method")    
-        return
-    endif
-
-    let pos = s:buildPositionList(initial, pattern)
+    let pos = s:buildPositionList(initial, a:pattern)
 
     if len(pos) == 0
         " If there aren't any matches, just jump back and peace out.
@@ -224,6 +211,7 @@ function! AceJump(method)
     endif
 
     " clean up the status line and return
+    call clearmatches()
     echo ""
     redraw
 
