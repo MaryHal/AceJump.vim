@@ -75,6 +75,12 @@ function! s:buildPositionList(initial, pattern)
         if position == [0, 0]
             break
         endif
+
+        " Skip folded lines
+        if foldclosed(position[0]) != -1
+            continue
+        endif
+
         let position[1] = position[1] - 1
         call add(posList, position)
     endwhile
@@ -183,12 +189,18 @@ function! AceJump(method)
 
     if a:method == 'word'
         call s:prompt("AceJump to words starting with letter")
-        let letter = s:getInput()
-        if empty(letter)
+        let char = s:getInput()
+        if empty(char)
             return
         endif
-
-        let pattern = '\<' . letter
+        let pattern = '\<' . char 
+    elseif a:method == 'char'
+        call s:prompt("AceJump to words starting with letter")
+        let char = s:getInput()
+        if empty(char)
+            return
+        endif
+        let pattern = '\C' . escape(char, '.$^~')
     elseif a:method == 'line'
         let pattern = '^\(\w\|\s*\zs\|$\)'
     else
