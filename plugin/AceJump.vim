@@ -17,8 +17,11 @@
 " 
 " let g:AceJump_Loaded = 1
 
-highlight AceJumpGrey ctermfg=darkgrey guifg=lightgrey
-highlight AceJumpRed ctermfg=darkred guibg=NONE guifg=black gui=NONE
+let g:AceJump_chars = 'abcdefghijlkmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+let g:AceJump_shade = 1
+
+highlight AceJumpGrey ctermfg=darkgrey guifg=dimgrey
+highlight AceJumpRed  ctermfg=darkred  guibg=NONE guifg=red gui=NONE
 
 function! s:VarReset(var, ...)
     if ! exists('s:var_reset')
@@ -63,11 +66,31 @@ function! s:getInput()
     return nr2char(char)
 endfunction
 
+function! s:setCursor(position)
+    call cursor(a:position[0], a:position[1])
+endfunction
+
+function! s:writeLines(lines, hlPos)
+    undojoin
+
+    for row in keys(a:lines)
+        call setline(row, a:lines[row][0])
+    endfor
+endfunction
+
+function! s:resetLines(lines)
+    undojoin
+
+    for row in keys(a:lines)
+        call setline(row, a:lines[row][1])
+    endfor
+endfunction
+
 function! s:buildPositionList(initial, pattern)
     " Row/col positions of words beginning with user's chosen letter
     let posList = []
 
-    call setpos('.', [0, line('w0'), 1, 0])
+    call s:setCursor([line('w0'), 1])
     while 1
         let position = searchpos(a:pattern, 'eW', line('w$'))
         if position == [0, 0]
@@ -79,17 +102,16 @@ function! s:buildPositionList(initial, pattern)
             continue
         endif
 
-        let position[1] = position[1] - 1
         call add(posList, position)
     endwhile
-    call setpos('.', a:initial)
+    call s:setCursor(a:initial)
 
     return posList
 endfunction
 
-function! s:jumpToPosition(initialPos, posList, origSearch)
+function! s:jumpToPosition(initialPos, posList)
     " Jump characters used to mark found words (user-editable)
-    let chars = 'abcdefghijlkmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    let chars = g:AceJump_chars
 
     if len(a:posList) > len(chars)
         " TODO add groupings here if more pos matches than jump characters
@@ -100,6 +122,8 @@ function! s:jumpToPosition(initialPos, posList, origSearch)
 
     " Jumps list to pair jump characters with found word positions
     let jumps = {}
+    let lines = {}
+    let hlPos = []
 
     " Change each found position to a jump character
     for [r,c] in pos
@@ -112,19 +136,32 @@ function! s:jumpToPosition(initialPos, posList, origSearch)
         let char = chars[0]
         let chars = chars[1:]
 
-        " Move cursor to the next found word
-        call setpos('.', [0, r, c+1, 0])
+        if ! has_key(lines, r)
+            let currentLine = getline(r)
+            let lines[r] = [currentLine, currentLine]
+        endif
+
+        " Modify string
+        if strlen(lines[r][0]) > 0
+            let lines[r][0] = substitute(lines[r][0], '\%' . c . 'c.', char, '')
+        else
+            let lines[r][0] = char
+        endif
 
         " Create jump character key to hold associated found word position
-        let jumps[char] = [0, r, c+1, 0]
+        let jumps[char] = [r, c]
 
-        " Replace first character in word with current jump character
-        exe 'normal! r'.char
-
-        " Change syntax on the jump character to make it highly visible
-        call matchadd('AceJumpRed', '\%' . r . 'l\%' . (c+1) . 'c', 50)
+        call add(hlPos, '\%' . r . 'l\%' . c . 'c')
     endfor
-    call setpos('.', a:initialPos)
+    call s:writeLines(lines, hlPos)
+
+    " monotone all text in visible part of window (dark grey by default)
+    if g:AceJump_shade
+        let shadeHighlight = matchadd('AceJumpGrey', '\%'.line('w0').'l\_.*\%'.line('w$').'l', 1)
+    endif
+
+    " Change syntax on the jump characters to make it highly visible
+    let jumpHighlight = matchadd('AceJumpRed', join(hlPos, '\|'), 1)
 
     " This redraw is critical to syntax highlighting
     redraw
@@ -133,30 +170,35 @@ function! s:jumpToPosition(initialPos, posList, origSearch)
     call s:prompt("AceJump to location")
     let jumpChar = s:getInput()
 
-    " Get rid of our syntax search highlighting
-    call clearmatches()
+    " Clear lines
+    call s:resetLines(lines)
+
+    " Remove highlighting
+    if g:AceJump_shade
+        call matchdelete(shadeHighlight)
+    endif
+    call matchdelete(jumpHighlight)
 
     " Clear out the status line
     echo ""
     redraw
 
-    " Restore previous search register value
-    let @/ = a:origSearch
-
-    " Undo all the jump character letter replacement
-    normal! u
-
     " If the user input a proper jump character, jump to it
     if has_key(jumps, jumpChar)
-        call setpos('.', jumps[jumpChar])
+        call s:setCursor(a:initialPos)
+        mark `
+
+        let position = jumps[jumpChar]
+        call s:setCursor(position)
+        " call s:message("Move to [" . position[0] . ", " . position[1] . "]")
     else
         " if it didn't work out, restore original cursor position
-        call setpos('.', a:initialPos)
+        call s:setCursor(a:initialPos)
     endif
 endfunction
 
 function! AceJumpWord()
-    call s:prompt("AceJump to words starting with letter")
+    call s:prompt("AceJump to word starting with letter")
     let char = s:getInput()
     if empty(char)
         return
@@ -166,7 +208,7 @@ function! AceJumpWord()
 endfunction
 
 function! AceJumpChar()
-    call s:prompt("AceJump to words starting with letter")
+    call s:prompt("AceJump to character starting with letter")
     let char = s:getInput()
     if empty(char)
         return
@@ -190,28 +232,23 @@ function! s:AceJump(pattern)
     call s:VarReset('&virtualedit', '')
 
     " store some current values for restoring later
-    let initial = getpos('.')
+    let initial = [line('.'), col('.')]
     let origSearch = @/
 
     let pos = s:buildPositionList(initial, a:pattern)
 
     if len(pos) == 0
         " If there aren't any matches, just jump back and peace out.
-        call setpos('.', initial)
+        call s:setCursor(initial)
         call s:message("No Matches")
     elseif len(pos) == 1
-        let [r, c] = pos[0]
-        call setpos('.', [0, r, c+1, 0])
+        call s:setCursor(pos[0])
     else
-        " monotone all text in visible part of window (dark grey by default)
-        call matchadd('AceJumpGrey', '\%'.line('w0').'l\_.*\%'.line('w$').'l', 50)
-
         " Jump. ACE Jump.
-        call s:jumpToPosition(initial, pos, origSearch)
+        call s:jumpToPosition(initial, pos)
     endif
 
     " clean up the status line and return
-    call clearmatches()
     echo ""
     redraw
 
