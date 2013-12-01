@@ -208,7 +208,7 @@ function! AceJumpWord()
 endfunction
 
 function! AceJumpChar()
-    call s:prompt("AceJump to character starting with letter")
+    call s:prompt("AceJump to character")
     let char = s:getInput()
     if empty(char)
         return
