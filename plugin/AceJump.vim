@@ -88,19 +88,11 @@ endfunction
 "===============================================================================
 " => Core Functions
 "===============================================================================
-function! s:writeLines(lines, hlPos)
+function! s:writeLines(lines, reset)
     undojoin
 
     for row in keys(a:lines)
-        call setline(row, a:lines[row][0])
-    endfor
-endfunction
-
-function! s:resetLines(lines)
-    undojoin
-
-    for row in keys(a:lines)
-        call setline(row, a:lines[row][1])
+        call setline(row, a:lines[row][a:reset])
     endfor
 endfunction
 
@@ -171,7 +163,7 @@ function! s:jumpToPosition(initialPos, posList)
 
         call add(hlPos, '\%' . r . 'l\%' . c . 'c')
     endfor
-    call s:writeLines(lines, hlPos)
+    call s:writeLines(lines, 0)
 
     " monotone all text in visible part of window (dark grey by default)
     if g:AceJump_shade
@@ -189,7 +181,7 @@ function! s:jumpToPosition(initialPos, posList)
     let jumpChar = s:getInput()
 
     " Clear lines
-    call s:resetLines(lines)
+    call s:writeLines(lines, 1)
 
     " Remove highlighting
     if g:AceJump_shade
