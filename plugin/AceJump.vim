@@ -10,7 +10,7 @@
 " Adapted from https://gist.github.com/gfixler/3167301
 " The author expressed that they do not want to maintain this script, so
 " here this is.
-"
+
 " if exists('g:AceJump_Loaded') || &cp || version < 702
 "     finish
 " endif
@@ -20,9 +20,24 @@
 let g:AceJump_chars = 'abcdefghijlkmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 let g:AceJump_shade = 1
 
-highlight AceJumpGrey ctermfg=darkgrey guifg=dimgrey
-highlight AceJumpRed  ctermfg=darkred  guibg=NONE guifg=red gui=NONE
+"===============================================================================
+" => Highlighting
+"===============================================================================
+function! s:setHighlight()
+    highlight AceJumpGrey ctermfg=darkgrey guifg=dimgrey
+    highlight AceJumpRed  ctermfg=darkred  guibg=NONE guifg=red gui=NONE
+endfunction
+call s:setHighlight()
 
+" Make sure shade/target colors reset after a new colorscheme is loaded.
+augroup AceJump_HighlightInit
+    autocmd!
+    autocmd ColorScheme * call s:setHighlight()
+augroup end
+
+"===============================================================================
+" => Helper Functions
+"===============================================================================
 function! s:VarReset(var, ...)
     if ! exists('s:var_reset')
         let s:var_reset = {}
@@ -70,6 +85,9 @@ function! s:setCursor(position)
     call cursor(a:position[0], a:position[1])
 endfunction
 
+"===============================================================================
+" => Core Functions
+"===============================================================================
 function! s:writeLines(lines, hlPos)
     undojoin
 
@@ -197,31 +215,6 @@ function! s:jumpToPosition(initialPos, posList)
     endif
 endfunction
 
-function! AceJumpWord()
-    call s:prompt("AceJump to word starting with letter")
-    let char = s:getInput()
-    if empty(char)
-        return
-    endif
-    let pattern = '\<' . char 
-    call s:AceJump(pattern)
-endfunction
-
-function! AceJumpChar()
-    call s:prompt("AceJump to character")
-    let char = s:getInput()
-    if empty(char)
-        return
-    endif
-    let pattern = '\C' . escape(char, '.$^~')
-    call s:AceJump(pattern)
-endfunction
-
-function! AceJumpLine()
-    let pattern = '^\(\w\|\s*\zs\|$\)'
-    call s:AceJump(pattern)
-endfunction
-
 function! s:AceJump(pattern)
     " Reset properties
     call s:VarReset('&scrolloff', 0)
@@ -261,6 +254,34 @@ function! s:AceJump(pattern)
     call s:VarReset('&virtualedit')
 
     return
+endfunction
+
+"===============================================================================
+" => User Functions
+"===============================================================================
+function! AceJumpWord()
+    call s:prompt("AceJump to word starting with letter")
+    let char = s:getInput()
+    if empty(char)
+        return
+    endif
+    let pattern = '\<' . char 
+    call s:AceJump(pattern)
+endfunction
+
+function! AceJumpChar()
+    call s:prompt("AceJump to character")
+    let char = s:getInput()
+    if empty(char)
+        return
+    endif
+    let pattern = '\C' . escape(char, '.$^~')
+    call s:AceJump(pattern)
+endfunction
+
+function! AceJumpLine()
+    let pattern = '^\(\w\|\s*\zs\|$\)'
+    call s:AceJump(pattern)
 endfunction
 
 finish
