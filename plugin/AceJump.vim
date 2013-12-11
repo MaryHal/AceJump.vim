@@ -81,6 +81,21 @@ function! s:getInput()
     return nr2char(char)
 endfunction
 
+function! s:getJumpChar(visual, prompt)
+    call s:prompt(a:prompt)
+    let char = s:getInput()
+
+    " Restore selection if empty input
+    if empty(char)
+        if ! empty(a:visual)
+            silent exec 'normal! gv'
+        endif
+        return ''
+    endif
+
+    return char
+endfunction
+
 function! s:setCursor(position)
     call cursor(a:position[0], a:position[1])
 endfunction
@@ -119,7 +134,7 @@ function! s:buildPositionList(initial, pattern)
     return posList
 endfunction
 
-function! s:jumpToPosition(initialPos, posList)
+function! s:jumpToPosition(initialPos, posList, visual)
     " Jump characters used to mark found words (user-editable)
     let chars = g:AceJump_chars
 
@@ -180,6 +195,11 @@ function! s:jumpToPosition(initialPos, posList)
     call s:prompt("AceJump to location")
     let jumpChar = s:getInput()
 
+    " if ! empty(a:visual)
+    "     keepjumps call cursor(a:initialPos[0], a:initialPos[1])
+    "     exec 'normal! ' . a:visual
+    " endif
+
     " Clear lines
     call s:writeLines(lines, 1)
 
@@ -207,7 +227,7 @@ function! s:jumpToPosition(initialPos, posList)
     endif
 endfunction
 
-function! s:AceJump(pattern)
+function! s:AceJump(visual, pattern)
     " Reset properties
     call s:VarReset('&scrolloff', 0)
     call s:VarReset('&modified', 0)
@@ -230,7 +250,7 @@ function! s:AceJump(pattern)
         call s:setCursor(pos[0])
     else
         " Jump. ACE Jump.
-        call s:jumpToPosition(initial, pos)
+        call s:jumpToPosition(initial, pos, a:visual)
     endif
 
     " clean up the status line and return
@@ -251,29 +271,27 @@ endfunction
 "===============================================================================
 " => User Functions
 "===============================================================================
-function! AceJumpWord()
-    call s:prompt("AceJump to word starting with letter")
-    let char = s:getInput()
+function! AceJumpWord(visual)
+    let char = s:getJumpChar(a:visual, "AceJump to word starting with letter")
     if empty(char)
         return
     endif
     let pattern = '\<' . char 
-    call s:AceJump(pattern)
+    call s:AceJump(a:visual, pattern)
 endfunction
 
-function! AceJumpChar()
-    call s:prompt("AceJump to character")
-    let char = s:getInput()
+function! AceJumpChar(visual)
+    let char = s:getJumpChar(a:visual, "AceJump to character")
     if empty(char)
         return
     endif
     let pattern = '\C' . escape(char, '.$^~')
-    call s:AceJump(pattern)
+    call s:AceJump(a:visual, pattern)
 endfunction
 
-function! AceJumpLine()
+function! AceJumpLine(visual)
     let pattern = '^\(\w\|\s*\zs\|$\)'
-    call s:AceJump(pattern)
+    call s:AceJump(a:visual, pattern)
 endfunction
 
 finish
