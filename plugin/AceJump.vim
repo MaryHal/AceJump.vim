@@ -195,10 +195,10 @@ function! s:jumpToPosition(initialPos, posList, visual)
     call s:prompt("AceJump to location")
     let jumpChar = s:getInput()
 
-    " if ! empty(a:visual)
-    "     keepjumps call cursor(a:initialPos[0], a:initialPos[1])
-    "     exec 'normal! ' . a:visual
-    " endif
+    if ! empty(a:visual)
+        keepjumps call cursor(a:initialPos[0], a:initialPos[1])
+        exec 'normal! gv'
+    endif
 
     " Clear lines
     call s:writeLines(lines, 1)
