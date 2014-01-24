@@ -11,11 +11,11 @@
 " The author expressed that they do not want to maintain this script, so
 " here this is.
 
-" if exists('g:AceJump_Loaded') || &cp || version < 702
-"     finish
-" endif
-" 
-" let g:AceJump_Loaded = 1
+if exists('g:AceJump_Loaded') || &cp || version < 702
+    finish
+endif
+
+let g:AceJump_Loaded = 1
 
 let g:AceJump_chars = 'abcdefghijlkmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 let g:AceJump_shade = 1
@@ -87,7 +87,7 @@ function! s:getJumpChar(visual, prompt)
 
     " Restore selection if empty input
     if empty(char)
-        if ! empty(a:visual)
+        if !empty(a:visual)
             silent exec 'normal! gv'
         endif
         return ''
