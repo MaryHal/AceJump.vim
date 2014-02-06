@@ -11,11 +11,11 @@
 " The author expressed that they do not want to maintain this script, so
 " here this is.
 
-if exists('g:AceJump_Loaded') || &cp || version < 702
-    finish
-endif
-
-let g:AceJump_Loaded = 1
+" if exists('g:AceJump_Loaded') || &cp || version < 702
+"     finish
+" endif
+"
+" let g:AceJump_Loaded = 1
 
 let g:AceJump_chars = 'abcdefghijlkmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 let g:AceJump_shade = 1
@@ -70,7 +70,11 @@ function! s:prompt(message)
 endfunction
 
 function! s:getInput()
-    let char = getchar()
+    try
+        let char = getchar()
+    catch /^Vim:Interrupt$/
+        let char = 27
+    endtry
 
     " Escape Pressed?
     if char == 27
